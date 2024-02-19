@@ -12,6 +12,7 @@
 
 \newcommand{\indexset}{\mathcal{I}}
 \newcommand{\valuebackward}{\mathcal{B}}
+\newcommand{\valuebackwardnodisc}{\mathcal{L}}
 \newcommand{\valuearbfree}{\mathcal{A}}
 
 \begin{document}
@@ -41,7 +42,7 @@ Although often termed as a `tree' method, the Yield Book utilises a lattice-base
 
 Since the lattice-based pricing approach is a general framework not limited to the 2-factor skew model, we consider the following more general form of a term-structure model: The short rate $r(t)$ is given as
 \begin{equation}
-    r(t) = F(\bm{y}(t), t) \label{E:short-rate-generic}
+    r(t) = R(\bm{y}(t), t) \label{E:short-rate-generic}
 \end{equation}
 where the 2-dimentional state vector $\bm{y} = (y_1, y_2)$ is driven by the following process:
 \begin{equation}
@@ -49,7 +50,7 @@ where the 2-dimentional state vector $\bm{y} = (y_1, y_2)$ is driven by the foll
     \quad\text{with}\quad \bm{y}(t_0) = \bm{0}.
     \label{E:state-variable-generic}
 \end{equation}
-Here, $F$ is a deterministic scalar function, $\bm{\mu}$ is a vector function, $\bm{\sigma}$ is a diagonal matrix function, and $\bm{W}(t)$ is a vector of independent Brownian motions.
+Here, $R$ is a deterministic scalar function, $\bm{\mu}$ is a vector function, $\bm{\sigma}$ is a diagonal matrix function, and $\bm{W}(t)$ is a vector of independent Brownian motions.
 
 \textbf{Note}: While it is straightforward to extend the model with more than two factors, the computational complexity of applying the lattice-based approach increases significantly with the number of factors. In practice, the approach is typically limited to models with at most two factors.
 
@@ -60,6 +61,7 @@ Here, $F$ is a deterministic scalar function, $\bm{\mu}$ is a vector function, $
 
 
 \subsection{Lattice Structure and Pricing}
+\label{S:lattice-structure}
 
 The structure of the lattice-based approach consistes of a collection of nodes over a time grid and transition probabilities between the nodes:
 \begin{itemize}
@@ -75,7 +77,7 @@ The structure of the lattice-based approach consistes of a collection of nodes o
     \end{equation}
     A {\em node} belonging to this set can be written in a vector form:
     \begin{equation}
-        \bm{y}_{n}^{\bm{m}} := (y_{1,n}^{m_1}, y_{2,n}^{m_2}) \quad\text{for}\quad m_1 = 1, \ldots, M_1 \quad\text{and}\quad m_2 = 1, \ldots, M_2
+        \bm{y}_{n}^{\bm{m}} := (y_{1,n}^{m_1}, y_{2,n}^{m_2}) \quad\text{for}\quad m_1 = 1, \ldots, M_{n,1} \quad\text{and}\quad m_2 = 1, \ldots, M_{n,2}.
     \end{equation}
     where the index vector $\bm{m} = (m_1, m_2)$ runs over $\indexset_n$, which denotes the Cartesian product of the indices $m_1$ and $m_2$.
 
@@ -86,13 +88,14 @@ The structure of the lattice-based approach consistes of a collection of nodes o
 
 \end{itemize}
 
-Once the lattice structure is set up, the pricing of a derivative contract is carried out by the standard backward induction method. Specifically, the price of the derivative contract at time $t_n$ is given by the following recursive formula:
+Once the lattice structure is constructed, the pricing of a derivative contract is carried out by the standard backward induction method. Specifically, the price of the derivative contract at time $t_n$ is given by the following recursive formula:
 \begin{equation}
-    V(\bm{y}_{n}^{\bm{s}}, t_n) = D(\bm{y}_n^{\bm{s}}, t_n)\sum_{\bm{e} \in \indexset_{n+1}} q_{n}^{\bm{s},\bm{e}} \times V(\bm{y}_{n+1}^{\bm{e}}, t_{n+1}) \label{E:backward-induction}
+    V(\bm{y}_{n}^{\bm{s}}, t_n) = D_n^{\bm{s}}\sum_{\bm{e} \in \indexset_{n+1}} q_{n}^{\bm{s},\bm{e}} \times V(\bm{y}_{n+1}^{\bm{e}}, t_{n+1}) \label{E:backward-induction}
 \end{equation}
-where $D(\bm{y}_n^{\bm{s}}, t_n)$ is the discount factor form time $t_{n+1}$ seen at time $t_{n}$ for the state vector $\bm{y}_n^{\bm{s}}$, and given by
+where $D_n^{\bm{s}}$ is the discount factor form time $t_{n+1}$ seen at time $t_{n}$ for the state vector $\bm{y}_n^{\bm{s}}$, and given by
 \begin{equation}
-    D(\bm{y}_n^{\bm{s}}, t_n) = \exp\left(-F(\bm{y}_n^{\bm{s}}) (t_{n+1} -t_n) \right)
+    D_n^{\bm{s}} = \exp\left(-R(\bm{y}_n^{\bm{s}}) (t_{n+1} -t_n) \right)
+    \label{E:discount-factor-node}
 \end{equation}
 through the short rate model \eqref{E:short-rate-generic}. Here, the short rate is assumed constant over the time interval $[t_n, t_{n+1})$ conditional on the state vector $\bm{y}_n^{\bm{s}}$ at $t_{n}$.
 
@@ -100,15 +103,16 @@ Applying the backward induction \eqref{E:backward-induction} to a given payoff f
 \begin{equation}
     \mathbb{E}_{\bm{y} \sim \bm{y}(t_n)}\left[ e^{-\int_{t_0}^{t_n} r(s)ds} g(\bm{y}) \right] \approx \valuebackward[g,t_n] \label{E:ideal-lattice}
 \end{equation}
-But, as we will see in the next section, the lattice structure is calibrated such that \eqref{E:ideal-lattice} holds under the assumption of zero rate ($r(t) = 0$). This approach makes the model calibration more modular, allowing it to be executed in two stages:
+But, as we will see in the next section, the lattice structure is constructed such that \eqref{E:ideal-lattice} holds under the assumption of zero rate ($r(t) = 0$). This approach makes the model calibration process more modular, allowing it to be executed in two stages:
 \begin{itemize}
-    \item setting up the lattice structure based on the dynamic model \eqref{E:state-variable-generic}
-    \item fitting the short rate model \eqref{E:short-rate-generic} to the $t_0$ term-structure
+    \item constructing the lattice structure based on the dynamic model \eqref{E:state-variable-generic}
+    \item fitting the short rate model \eqref{E:short-rate-generic} to the given term-structure
 \end{itemize}
 
-\subsection{Calibration of the Lattice Structure}
+\subsection{Lattice structure construction}
+\label{S:lattice-structure-construction}
 
-Suppose that the model parameters $\bm{\mu}$ and $\bm{\sigma}$ for the state variable process \eqref{E:state-variable-generic} are given.
+In this section, we describe the procedure of constructing the lattice structure, given a set of the model parameters $\bm{\mu}$ and $\bm{\sigma}$ for the state variable process in \eqref{E:state-variable-generic}.
 
 \paragraph*{time grid:}
 
@@ -123,23 +127,23 @@ In particular, the state vector $\bm{y}(t_{n+1})$ conditional on $\bm{y}(t_n) = 
 
 The nodes and transition probabilities are constructed recursively. Suppose that the nodes and transition probabilities are already constructed up to time $t_n$ in such a way that 
 \begin{equation}
-    \valuebackward'[g, t_n] \approx \mathbb{E}_{\bm{y}\sim\bm{y}(t_n)}\left[ g(\bm{y}) \right] 
+    \valuebackwardnodisc[g, t_n] \approx \mathbb{E}_{\bm{y}\sim\bm{y}(t_n)}\left[ g(\bm{y}) \right] 
     \label{E:lattice-calib}
 \end{equation}
-where $\valuebackward'[g, t_n]$ is obtained by the same backward induction \eqref{E:backward-induction}, but with the discount factor set to one. 
+where $\valuebackwardnodisc[g, t_n]$ is obtained by the same backward induction \eqref{E:backward-induction}, but with the discount factor set to one. 
 
 Since the backward induction \eqref{E:backward-induction} is a linear operation, 
-$\valuebackward'[g, t_n]$ can be written as a linear combination of the values of $g(\bm{y})$ at the nodes corresponding to time $t_n$. Combined with \eqref{E:lattice-calib}, this implies that
+$\valuebackwardnodisc[g, t_n]$ can be written as a linear combination of the values of $g(\bm{y})$ at the nodes corresponding to time $t_n$. Combined with \eqref{E:lattice-calib}, this implies that
 \begin{equation}
 \sum_{\bm{m} \in \indexset_n} A_{n}^{\bm{m}} \times g(\bm{y}_n^{\bm{m}}) \approx \mathbb{E}_{\bm{y}\sim \bm{y}(t_n)}\left[ g(\bm{y}) \right] 
 \label{E:lattice-calib-arrow-debreu}
 \end{equation}
-for some coefficients $A_{n}^{\bm{m}}$, known as Arrow-Debreu prices (see \S~\ref{S:arrow-debreu} for derivation of these prices).\footnote{In \cite{2fs-citi-mv}, the Arrow-Debreu price representation \eqref{E:lattice-calib-arrow-debreu}
+for some coefficients $A_{n}^{\bm{m}}$.\footnote{$A_{n}^{\bm{m}}$ can be interpreted as Arrow-Debreu prices under the zero-rate assumption. In \cite{2fs-citi-mv}, the representation \eqref{E:lattice-calib-arrow-debreu}
 is the starting point of the lattice-based pricing approach.}
 
 By definition, we have
 \begin{equation}
-    A_{n}^{\bm{m}} = \valuebackward'[F_n^{\bm{m}}, t_n] \label{E:arrow-debreu-def}
+    A_{n}^{\bm{m}} = \valuebackwardnodisc[F_n^{\bm{m}}, t_n] \label{E:arrow-debreu-def}
 \end{equation}
 where $F_n^{\bm{m}}(\bm{y})$ is a continous approximation to the `delta' payoff function\footnote{In \cite{2fs-citi-mv}, this function is referred to as a spline basis function}, and its value at the node points are given by
 \begin{equation}
@@ -177,7 +181,7 @@ The nodes \eqref{E:node-set} at time $t_{n+1}$ are located by identifying an int
                   & = & \mathbb{E}_{\bm{y}\sim\bm{y}(t_n)}[g_{i,n}(\bm{y})] \label{E:mean-by-def}\\
                   & \approx & \sum_{\bm{m} \in \indexset_n} A_{k, \bm{m}} \times g_{i,n}(\bm{y}_{n}^{\bm{m}}) \label{E:mean-app-arrow-debreu} 
     \end{eqnarray}
-    where \eqref{E:mean-tower} is from the tower property of conditional expectation, \eqref{E:mean-by-def} is by the definition of the payoff function $g_{i,n}$, and \eqref{E:mean-app-arrow-debreu} is from the Arrow-Debreu price representation \eqref{E:lattice-calib-arrow-debreu}.
+    where \eqref{E:mean-tower} is from the tower property of conditional expectation, \eqref{E:mean-by-def} is by the definition of the payoff function $g_{i,n}$, and \eqref{E:mean-app-arrow-debreu} is from \eqref{E:lattice-calib-arrow-debreu}.
     \item To calculate the standard deviation, consider another special payoff function:
     \begin{equation}
         h_{i,n}(\bm{y}) := \mathbb{E}[y_i(t_{n+1})^2|\bm{y}(t_n)= \bm{y}] 
@@ -194,39 +198,101 @@ The nodes \eqref{E:node-set} at time $t_{n+1}$ are located by identifying an int
 
 For how $\nu$ and $M_i$'s are set, see \S~\ref{S:node-grid}.
 
-\paragraph*{Transition probabilities:}
+\paragraph*{transition probabilities:}
 
 The goal is to set the transition probability matrix $\bm{Q}_n$ such that \eqref{E:lattice-calib} holds for the next time step $t_{n+1}$. To this end, consider the delta payoff function $F_{n+1}^{\bm{e}}(\bm{y})$ at time $t_{n+1}$ as defined in \eqref{E:delta-payoff}. 
 
-In one hand,
+On the one hand, we have
 \begin{eqnarray}
-    \valuebackward'[F_{n+1}^{\bm{e}}, t_{n+1}] & = & \sum_{\bm{s} \in \indexset_{n}} q_{n}^{\bm{s},\bm{e}} \times \valuebackward'[F_{n}^{\bm{s}}, t_{n}] \label{E:transition-prob-calib} 
+    \valuebackwardnodisc[F_{n+1}^{\bm{e}}, t_{n+1}] & = & \sum_{\bm{s} \in \indexset_{n}} q_{n}^{\bm{s},\bm{e}} \times \valuebackwardnodisc[F_{n}^{\bm{s}}, t_{n}]. \label{E:transition-prob-calib}
 \end{eqnarray}
-which can be computed numerically as shown later in this section.
 
 On the other hand, let's define 
 \begin{equation}
-    f_{n}^{\bm{m}}(\bm{y}) := \mathbb{E}[F_{n+1}^{\bm{m}}(\bm{y}_{n+1})|\bm{y}(t_n)=\bm{y}]
-    \quad \text{for}\quad \bm{m} \in \indexset_{n+1}.
+    f_{n}^{\bm{e}}(\bm{s}) := \mathbb{E}[F_{n+1}^{\bm{e}}(\bm{y}_{n+1})|\bm{y}(t_n)=\bm{y}_n^{\bm{s}}]
+    \quad \text{for}\quad \bm{s} \in \indexset_{n} \quad\text{and}\quad \bm{e} \in \indexset_{n+1}.
 \end{equation}
+which can be computed numerically as shown later in this section.
 Then, we have
 \begin{eqnarray}
     \mathbb{E}_{\bm{y}\sim\bm{y}(t_{n+1})}\left[ F_{n+1}^{\bm{e}}(\bm{y}) \right] & = & 
     \mathbb{E}_{\bm{y}\sim\bm{y}(t_{n})}\left[ f_{n}^{\bm{e}}(\bm{y}) \right] \\
-    & \approx & \sum_{\bm{s} \in \indexset_{n}} A_{n}^{\bm{s}} \times f_{n+1}^{\bm{e}}(\bm{s}).
+    & \approx & \sum_{\bm{s} \in \indexset_{n}} A_{n}^{\bm{s}} \times f_{n+1}^{\bm{e}}(\bm{s})
     \label{E:transition-prob-calib-2}
 \end{eqnarray}
-Comparing \eqref{E:transition-prob-calib} to \eqref{E:transition-prob-calib-2} alongside the Arrow-Debreu definition \eqref{E:arrow-debreu-def}, we deduce that
+where \eqref{E:lattice-calib-arrow-debreu} is applied.
+Comparing \eqref{E:transition-prob-calib} to \eqref{E:transition-prob-calib-2} alongside \eqref{E:arrow-debreu-def}, we deduce that
 \begin{equation}
     q_{n}^{\bm{s},\bm{e}} = f_{n+1}^{\bm{e}}(\bm{s}).
 \end{equation}
 
-It remains to describe how $f_{n+1}^{\bm{m}}(\bm{y})$ is computed: 
+It remains to describe how $f_{n+1}^{\bm{e}}(\bm{s})$ is computed: 
 \begin{eqnarray}
-f_{n+1}^{\bm{m}}(\bm{y}) & = & \mathbb{E} [F_{1,n+1}^{m_1}(y_1(t_{n+1})) \times F_{2,n+1}^{m_2}(y_2(t_{n+1}))| y_1(t_n) = y_1, y_2(t_n) = y_2] \label{E:green-1}\\
-    & = & \prod_{i=1,2} \mathbb{E} [F_{i,n+1}^{m_i}(y_i(t_{n+1})) | y_i(t_n) = y_1] \label{E:green-2}
+f_{n+1}^{\bm{e}}(\bm{s}) & := & \mathbb{E} [F_{1,n+1}^{e_1}(y_1(t_{n+1})) \times F_{2,n+1}^{e_2}(y_2(t_{n+1}))| \bm{y}(t_n) = \bm{y}_n^{\bm{s}}] \label{E:green-1}\\
+    & = & \prod_{i=1,2} \mathbb{E} [F_{i,n+1}^{e_i}(y_i(t_{n+1})) | \bm{y}(t_n) = \bm{y}_n^{\bm{s}}] \label{E:green-2}
 \end{eqnarray}
-where the last step is from the independence of the state variables $y_1$ and $y_2$, and each term in the product is computed numerically using the standard Gaussian quadratures. 
+because the state variables $y_1(t_{n+1})$ and $y_2(t_{n+1})$ are independent conditional on the previous time step as the Brownian motions in \eqref{E:state-variable-generic} are assumed independent.
+The $i$-th term in \eqref{E:green-2}, denoted by $f_{i,n+1}^{e_i}(\bm{s})$, is computed numerically using the standard Gaussian quadratures.
+
+The independence assummption significantly reduces the computational complexity and memory requirement for the transition probability matrix. Specifically, we only need to compute and store the following number of expected values
+\begin{eqnarray}
+    (M_{n,1} \times M_{n,2}) \times (M_{n+1,1} + M_{n+1,2}),
+\end{eqnarray}
+which is considerably less than the actual number of elements in the transition probability matrix $\bm{Q}_n$
+\begin{eqnarray}
+    (M_{n,1} \times M_{n,2}) \times (M_{n+1,1} \times M_{n+1,2}).
+\end{eqnarray}
+
+\paragraph*{construction outputs:}
+
+The construction outputs are the nodes and transition probabilities for each time step $t_n$ in the time grid \eqref{E:time-grid}. For transition probabilities, we store the expected values $f_{i,n+1}^{e_i}(\bm{s})$ for $i = 1, 2$, $\bm{s} \in \indexset_n$, and $e_i = 1, \cdots, M_{i,n+1}$.
+
+\subsection{Fitting to term-structure}
+\label{S:fitting-term-structure}
+
+The short rate model \eqref{E:short-rate-generic} is fitted to match the given term-structure, by assuming $R(\bm{y}, t)$ is represented by a piecewise-constant function $R_{n+1}(\bm{y})$ over each 
+time interval $[t_n, t_{n+1})$. Recall from \eqref{E:discount-factor-node}, this implies that the discount factor $D_n^{\bm{s}}$ can be denoted with explicit dependence on $R_{n+1}$: 
+\begin{eqnarray}
+    D_n^{\bm{s}}(R_{n+1})
+\end{eqnarray}
+
+Before proceeding to the fitting process, let's first introduce the following variables:
+\begin{itemize}
+    \item $\mathcal{P}_n$: the discount factor, or the price of a zero-coupon bond maturing at time $t_n$ seen at time $t_0$. This is derived from the term-structure.
+    \item $P_n^{\bm{m}}$: the Arrow-Debreu price of the payoff function $F_n^{\bm{m}}$ This is obtained by the backward induction \eqref{E:backward-induction} with the discount factor {\em included}:
+    \begin{equation}
+        P_n^{\bm{m}} = \valuebackward[F_n^{\bm{m}}, t_n].
+    \end{equation}
+\end{itemize}
+
+The fitting process is a forward stepping process through the following recursive formula: 
+\begin{equation}
+    \mathcal{P}_{n+1} =  \sum_{\bm{s} \in \indexset_n}\sum_{\bm{e} \in \indexset_{n+1}} D_n^{\bm{s}}(R_{n+1}) \times q_{n}^{\bm{s},\bm{e}} \times P_n^{\bm{s}} \label{E:term-structure-forward-calib}
+\end{equation}
+
+For $n=0$, we trivially set $P_0^{\bm{s}} = 1$ for all $\bm{s} \in \indexset_0$,\footnote{It consists of a single node} and match $\mathcal{P}_0 = 0$. In this step, $R_0$ is not applicable.
+
+Suppose that we have fitted up to time $t_n$, keeping the Arrow-Debreu prices $P_n^{\bm{s}}$ for all $\bm{s} \in \indexset_n$. Then,
+\begin{enumerate}
+    \item solve for $R_{n+1}$ using \eqref{E:term-structure-forward-calib}. 
+    \item for each $\bm{e} \in \indexset_{n+1}$, calculate the Arrow-Debreu price $P_{n+1}^{\bm{e}}$:
+    \begin{equation}
+        P_{n+1}^{\bm{e}} = \sum_{\bm{s} \in \indexset_n} D_n^{\bm{s}}(R_{n+1}) \times q_{n}^{\bm{s},\bm{e}} \times P_n^{\bm{s}}
+    \end{equation}
+\end{enumerate}
+
+\subsection{Calibration}
+
+The model parameters $\bm{\mu}$ and $\bm{\sigma}$ are calibrated to a set of benchmark derivative contracts by minimizing the aggregate error between the benchmark prices and the lattice-based prices.
+Specifically, the calibration process is carried out in the following steps:
+\begin{enumerate}
+    \item Guess the model parameters $\bm{\mu}$ and $\bm{\sigma}$.
+    \item Construct the lattice structure as described in \S~\ref{S:lattice-structure-construction}.
+    \item Fit the short rate model to the given term-structure as described in \S~\ref{S:fitting-term-structure}.
+    \item For each benchmark derivative contract, calculate the lattice-based price using the backward induction \eqref{E:backward-induction}.
+    \item Minimize the aggregate error between the benchmark prices and the lattice-based prices by adjusting the model parameters $\bm{\mu}$ and $\bm{\sigma}$.
+\end{enumerate}
+
 
 \section{Calibration parameters}
 
