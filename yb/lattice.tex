@@ -145,7 +145,7 @@ By definition, we have
 \begin{equation}
     A_{n}^{\bm{m}} = \valuebackwardnodisc[F_n^{\bm{m}}, t_n] \label{E:arrow-debreu-def}
 \end{equation}
-where $F_n^{\bm{m}}(\bm{y})$ is a continous approximation to the `delta' payoff function\footnote{In \cite{2fs-citi-mv}, this function is referred to as a spline basis function}, and its value at the node points are given by
+where $F_n^{\bm{m}}(\bm{y})$ is a continous approximation to the `delta' payoff function, and its value at the node points are given by
 \begin{equation}
     F^{\bm{m}}(\bm{y}_{n}^{\bm{k}}) = 
     \left\{
@@ -156,12 +156,11 @@ where $F_n^{\bm{m}}(\bm{y})$ is a continous approximation to the `delta' payoff 
     \right.
     \label{E:delta-payoff}
 \end{equation}
-For non-node points, the value of $F_n^{\bm{m}}(\bm{y})$ is obtained by bi-linear interpolation. 
-In addition, we have 
+Specifically, $F_n^{\bm{m}}(\bm{y})$ is defined as
 \begin{equation}
     F_n^{\bm{m}}(\bm{y}) = F_{1,n}^{m_1}(y_1) \times F_{2,n}^{m_2}(y_2)
 \end{equation}
-where $F_{i,n}^{m_i}(y_i)$ is a continuous approximation to the `delta' payoff function for the $i$-th state variable $y_i$ at time $t_n$.
+where $F_{i,n}^{m_i}(y_i)$ is the natural cubic spline function that connects the above payoff values at the nodes for the $i$-th state variable $y_i$ at time $t_n$. For further details, see \S~\ref{S:cubic-spline}.
 
 Now, we proceed to construct the lattice structure for time $t_{n+1}$. 
 
@@ -326,9 +325,44 @@ The time grid \eqref{E:time-grid} is constructed based on a pre-configured set o
 \section{Arrow-Debreu Price Derivation}
 \label{S:arrow-debreu}
 
+\section{Natural Cubic Spline}
+\label{S:cubic-spline}
+
+The delta payoff function $F_n^{\bm{m}}$ in \eqref{E:delta-payoff} is a product of two natural cubic splines. In the Yield Book, each of the splines is constructed by solving a tridiagonal linear system on the second derivatives of the spline function. 
+
+Consider a sequence of $n$ points:
+\begin{eqnarray}
+    (x_0, y_0), \cdots, (x_{n-1}, y_{n-1}) 
+\end{eqnarray}
+Then, the second derivatives, denoted by $S_i$ at the $i$-th point, satisfy the following tridiagonal linear system (see, for example, 
+\href{https://charles-oneill.com/projects/cubicspline.pdf}{this paper})
+\begin{equation}
+    h_{i-1}S_{i-1} + 2(h_{i-1} + h_i)S_i + h_iS_{i+1} = 6\left(\frac{y_{i+1} - y_i}{h_i} - \frac{y_i - y_{i-1}}{h_{i-1}}\right), \quad i = 1, \cdots, n-2
+    \label{E:cubic-spline-td-linear-system}
+\end{equation}
+where $h_i = x_{i+1} - x_{i}$. For the natural cubic spline, we set $S_0 = S_{n-1} = 0$.
+Any tridiagonal matrix solver such as the \href{https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm}{Thomas algorithm} can be used to solve the system \eqref{E:cubic-spline-td-linear-system}.
+
+Once the second derivatives are obtained, the cubic function $S_i(x)$ over the interval $[x_{i}, x_{i+1})$ is given by
+\begin{equation}
+    S_i(x) = a_i(x - x_i)^3 + b_i(x - x_i)^2 + c_i(x - x_i) + d_i
+\end{equation}
+where
+\begin{eqnarray}
+    a_i & = & \frac{S_{i+1} - S_i}{6h_i} \\
+    b_i & = & \frac{S_i}{2} \\
+    c_i & = & \frac{y_{i+1} - y_i}{h_i} - \frac{h_i}{6}(S_{i+1} + 2S_i) \\
+    d_i & = & y_i
+\end{eqnarray}
+
+\section{Gauss-Hermite quadrature}
+
+Since the state variables $y_i(t_{n+1})$ are assumed to be normally distributed, the expected value of a function $f(y_i(t_{n+1}))$ in \eqref{E:green-2} can be computed using the \href{https://en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature}{Gauss-Hermite quadrature}. The number of quadrature points is a pre-configured model parameter. 
+
 \begin{thebibliography}{}
     
     \bibitem{2fs-citi-mv} 2F-skew model for agency bonds in MRMS and the Yield Book, Level 2 Valuation, Xiaobo Liu, 2005, Citigroup.
+
 
 \end{thebibliography}
 
