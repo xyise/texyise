@@ -1,3 +1,6 @@
+# python
+venv/
+
 # per:  "latex-workshop.latex.outDir": "%DIR%/latex.out",
 latex.out/
 

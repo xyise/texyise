@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "texyise"
+version = "0.1.0"
+description = "texyise"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "plotly",
+    "jupyter",
+    "ipython",
+    "ipykernel",
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "pre-commit"
+]
+
+[tool.setuptools.packages.find]
+where = ["python/src"] # 
+
+[tool.black]
+line-length = 120
