@@ -1,0 +1,251 @@
+\documentclass{texyise}
+
+\documentTitle{On lattice-based pricing}
+\documentAuthor{...}
+\documentDate{...}
+\documentClassification{...}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{bm}
+\usepackage{hyperref}
+
+\newcommand{\indexset}{\mathcal{I}}
+\newcommand{\valuebackward}{\mathcal{B}}
+\newcommand{\valuearbfree}{\mathcal{A}}
+
+\begin{document}
+
+\section{Introduction}
+
+\subsection{2-factor skew model}
+
+In the Yield Book, the 2-factor skew model for short rate $r(t)$ is given as
+\begin{equation}
+    r(t) = f(t) e^{x(t)} - \beta  \label{E:2fskew}
+\end{equation}
+where $\beta$ is a constant and $f(t)$ is a determinstic function in time $t$. The state variable $x(t)$ is driven by a two-factor process with the following dynamics:
+\begin{eqnarray}
+    dx(t) &=& (-a(t)x(t)+u(t))dt + \sigma_1(t) dW_1(t) \label{E:2fskew1} \\
+    du(t) &=& -k(t)u(t)dt + \sigma_2(t) dW_2(t) \label{E:2fskew2}
+\end{eqnarray}
+where $W_1(t)$ and $W_2(t)$ are independent Brownian motions and the parameters $a(t)$, $k(t)$, $\sigma_1(t)$, $\sigma_2(t)$ are deterministic functions in time $t$.
+Denoting the valuation time by $t_0$, the initial values of the state variables are given as
+\begin{equation}
+    x(t_0) = 0 \quad \text{and} \quad u(t_0) = 0.
+\end{equation}
+
+\subsection{Purpose of This Document}
+
+Although often termed as a `tree' method, the Yield Book utilises a lattice-based pricing approach to implement the 2-factor skew model for pricing interest rate derivatives. While it shares a lot of similarities with the tree method, the lattice-based pricing approach has distinct features. The purpose of this note is to provide a more detailed documentation of the lattice-based pricing approach, supplementing the existing documentation in \cite{2fs-citi-mv}.
+
+Since the lattice-based pricing approach is a general framework not limited to the 2-factor skew model, we consider the following more general form of a term-structure model: The short rate $r(t)$ is given as
+\begin{equation}
+    r(t) = F(\bm{y}(t), t) \label{E:short-rate-generic}
+\end{equation}
+where the 2-dimentional state vector $\bm{y} = (y_1, y_2)$ is driven by the following process:
+\begin{equation}
+    d\bm{y}(t) = \bm{\mu}(\bm{y}(t), t) dt + \bm{\sigma}(\bm{y}(t), t) d\bm{W}(t) 
+    \quad\text{with}\quad \bm{y}(t_0) = \bm{0}.
+    \label{E:state-variable-generic}
+\end{equation}
+Here, $F$ is a deterministic scalar function, $\bm{\mu}$ is a vector function, $\bm{\sigma}$ is a diagonal matrix function, and $\bm{W}(t)$ is a vector of independent Brownian motions.
+
+\textbf{Note}: While it is straightforward to extend the model with more than two factors, the computational complexity of applying the lattice-based approach increases significantly with the number of factors. In practice, the approach is typically limited to models with at most two factors.
+
+\section{Lattice-Based Pricing Approach}
+\label{S:lattice-based-pricing}
+
+\textbf{Note}: As we aim to be as precise as possible in describing the lattice-based pricing approach, the notation used in this section might appear quite complex. 
+
+
+\subsection{Lattice Structure and Pricing}
+
+The structure of the lattice-based approach consistes of a collection of nodes over a time grid and transition probabilities between the nodes:
+\begin{itemize}
+    \item time grid:
+    \begin{equation}
+        t_0 < t_1 < \cdots < t_N \label{E:time-grid}
+    \end{equation}
+    where $t_0$ is the valuation time and $t_N$ is the final date pertinent to the pricing of the derivative contracts under considerations (e.g.\ the maturity in case of pricing a bond). 
+    \item nodes: For each time $t_n$ in the time grid, we have a set of discrete state vectors, denote by $\mathcal{Y}_n$, as a 2-dimensional Cartesian product:
+    \begin{equation}
+        \mathcal{Y}_n := Y_{1,n} \times Y_{2,n} = \left\{ y_{1,n}^{m_1} \right\}_{m=1}^{M_1} \times \left\{ y_{2,n}^{m_2} \right\}_{m=1}^{M_2}
+        \label{E:node-set}
+    \end{equation}
+    A {\em node} belonging to this set can be written in a vector form:
+    \begin{equation}
+        \bm{y}_{n}^{\bm{m}} := (y_{1,n}^{m_1}, y_{2,n}^{m_2}) \quad\text{for}\quad m_1 = 1, \ldots, M_1 \quad\text{and}\quad m_2 = 1, \ldots, M_2
+    \end{equation}
+    where the index vector $\bm{m} = (m_1, m_2)$ runs over $\indexset_n$, which denotes the Cartesian product of the indices $m_1$ and $m_2$.
+
+    \item transition probabilities: For each time $t_n$, we have a transition probability matrix $\bm{Q}_n$ that describes the transition of the state vector from time $t_n$ to time $t_{n+1}$:
+    \begin{equation}
+        \bm{Q}_n = \left[ q_{n}^{\bm{s},\bm{e}} \right]_{\bm{s} \in \indexset_n, \bm{e} \in \indexset_{n+1}}.
+    \end{equation} 
+
+\end{itemize}
+
+Once the lattice structure is set up, the pricing of a derivative contract is carried out by the standard backward induction method. Specifically, the price of the derivative contract at time $t_n$ is given by the following recursive formula:
+\begin{equation}
+    V(\bm{y}_{n}^{\bm{s}}, t_n) = D(\bm{y}_n^{\bm{s}}, t_n)\sum_{\bm{e} \in \indexset_{n+1}} q_{n}^{\bm{s},\bm{e}} \times V(\bm{y}_{n+1}^{\bm{e}}, t_{n+1}) \label{E:backward-induction}
+\end{equation}
+where $D(\bm{y}_n^{\bm{s}}, t_n)$ is the discount factor form time $t_{n+1}$ seen at time $t_{n}$ for the state vector $\bm{y}_n^{\bm{s}}$, and given by
+\begin{equation}
+    D(\bm{y}_n^{\bm{s}}, t_n) = \exp\left(-F(\bm{y}_n^{\bm{s}}) (t_{n+1} -t_n) \right)
+\end{equation}
+through the short rate model \eqref{E:short-rate-generic}. Here, the short rate is assumed constant over the time interval $[t_n, t_{n+1})$ conditional on the state vector $\bm{y}_n^{\bm{s}}$ at $t_{n}$.
+
+Applying the backward induction \eqref{E:backward-induction} to a given payoff function $g(\bm{y})$ at time $t_n$, the value of the derivative contract at the valuation time $t_0$ is denoted by $\valuebackward[g, t_n]$. Then, the lattice structure {\em would} be set up such that it converges to the true value of the derivative contract through the arbitrage-free pricing principle:
+\begin{equation}
+    \mathbb{E}_{\bm{y} \sim \bm{y}(t_n)}\left[ e^{-\int_{t_0}^{t_n} r(s)ds} g(\bm{y}) \right] \approx \valuebackward[g,t_n] \label{E:ideal-lattice}
+\end{equation}
+But, as we will see in the next section, the lattice structure is calibrated such that \eqref{E:ideal-lattice} holds under the assumption of zero rate ($r(t) = 0$). This approach makes the model calibration more modular, allowing it to be executed in two stages:
+\begin{itemize}
+    \item setting up the lattice structure based on the dynamic model \eqref{E:state-variable-generic}
+    \item fitting the short rate model \eqref{E:short-rate-generic} to the $t_0$ term-structure
+\end{itemize}
+
+\subsection{Calibration of the Lattice Structure}
+
+Suppose that the model parameters $\bm{\mu}$ and $\bm{\sigma}$ for the state variable process \eqref{E:state-variable-generic} are given.
+
+\paragraph*{time grid:}
+
+First, divide the time horizon into small time steps to set up the time grid \eqref{E:time-grid} as described in \S~\ref{S:time-grid}. Then, all model variables are assumed to be piecewise constant over each time intervals $[t_n, t_{n+1})$.
+In particular, the state vector $\bm{y}(t_{n+1})$ conditional on $\bm{y}(t_n) = \bm{y}$ follows a multivariate normal distribution of independent variables and satisfies
+\begin{equation}
+    y_i(t_{n+1}) | \bm{y}(t_n) = \bm{y}  \sim \mathcal{N}(\mu_{i,n}(\bm{y},t_n), \sigma_{i,n}(\bm{y},t_n)^2)
+    \label{E:conditional-distribution}
+\end{equation}
+
+\paragraph*{recursion setup:}
+
+The nodes and transition probabilities are constructed recursively. Suppose that the nodes and transition probabilities are already constructed up to time $t_n$ in such a way that 
+\begin{equation}
+    \valuebackward'[g, t_n] \approx \mathbb{E}_{\bm{y}\sim\bm{y}(t_n)}\left[ g(\bm{y}) \right] 
+    \label{E:lattice-calib}
+\end{equation}
+where $\valuebackward'[g, t_n]$ is obtained by the same backward induction \eqref{E:backward-induction}, but with the discount factor set to one. 
+
+Since the backward induction \eqref{E:backward-induction} is a linear operation, 
+$\valuebackward'[g, t_n]$ can be written as a linear combination of the values of $g(\bm{y})$ at the nodes corresponding to time $t_n$. Combined with \eqref{E:lattice-calib}, this implies that
+\begin{equation}
+\sum_{\bm{m} \in \indexset_n} A_{n}^{\bm{m}} \times g(\bm{y}_n^{\bm{m}}) \approx \mathbb{E}_{\bm{y}\sim \bm{y}(t_n)}\left[ g(\bm{y}) \right] 
+\label{E:lattice-calib-arrow-debreu}
+\end{equation}
+for some coefficients $A_{n}^{\bm{m}}$, known as Arrow-Debreu prices (see \S~\ref{S:arrow-debreu} for derivation of these prices).\footnote{In \cite{2fs-citi-mv}, the Arrow-Debreu price representation \eqref{E:lattice-calib-arrow-debreu}
+is the starting point of the lattice-based pricing approach.}
+
+By definition, we have
+\begin{equation}
+    A_{n}^{\bm{m}} = \valuebackward'[F_n^{\bm{m}}, t_n] \label{E:arrow-debreu-def}
+\end{equation}
+where $F_n^{\bm{m}}(\bm{y})$ is a continous approximation to the `delta' payoff function\footnote{In \cite{2fs-citi-mv}, this function is referred to as a spline basis function}, and its value at the node points are given by
+\begin{equation}
+    F^{\bm{m}}(\bm{y}_{n}^{\bm{k}}) = 
+    \left\{
+    \begin{array}{cl}
+        1 & \text{if}\quad \bm{k} = \bm{m} \\
+        0 & \text{otherwise}
+    \end{array}
+    \right.
+    \label{E:delta-payoff}
+\end{equation}
+For non-node points, the value of $F_n^{\bm{m}}(\bm{y})$ is obtained by bi-linear interpolation. 
+In addition, we have 
+\begin{equation}
+    F_n^{\bm{m}}(\bm{y}) = F_{1,n}^{m_1}(y_1) \times F_{2,n}^{m_2}(y_2)
+\end{equation}
+where $F_{i,n}^{m_i}(y_i)$ is a continuous approximation to the `delta' payoff function for the $i$-th state variable $y_i$ at time $t_n$.
+
+Now, we proceed to construct the lattice structure for time $t_{n+1}$. 
+
+\paragraph*{nodes:}
+
+The nodes \eqref{E:node-set} at time $t_{n+1}$ are located by identifying an intervals that encompasses the majority of the probability distribution of each state variable $y_i(t_{n+1})$. Specifically, the interval for state variable $y_i$ is set to that that covers $\nu$ standard deviations of $y_i(t_{n+1})$ from the mean of $y_i(t_{n+1})$, and the $i$-th node set $Y_i$ in \eqref{E:node-set} is set to the $M_i$ equally spaced grid points in the interval for $y_i(t_{n+1})$.
+
+\begin{itemize}
+    \item To calculate the mean, consider a special payoff function:
+    \begin{equation}
+    g_{i,n}(\bm{y}) := \mathbb{E}[y_i(t_{n+1}) | \bm{y}(t_n) = \bm{y}]
+    \end{equation}
+    which is readily available from \eqref{E:conditional-distribution}.
+    Then, we have
+    \begin{eqnarray}
+        \mathbb{E}[y_i(t_{n+1})] & = & \mathbb{E}_{\bm{y}\sim\bm{y}(t_n)}[\mathbb{E}[y_i(t_{n+1}) | \bm{y}(t_n) = \bm{y}]] \label{E:mean-tower}\\
+                  & = & \mathbb{E}_{\bm{y}\sim\bm{y}(t_n)}[g_{i,n}(\bm{y})] \label{E:mean-by-def}\\
+                  & \approx & \sum_{\bm{m} \in \indexset_n} A_{k, \bm{m}} \times g_{i,n}(\bm{y}_{n}^{\bm{m}}) \label{E:mean-app-arrow-debreu} 
+    \end{eqnarray}
+    where \eqref{E:mean-tower} is from the tower property of conditional expectation, \eqref{E:mean-by-def} is by the definition of the payoff function $g_{i,n}$, and \eqref{E:mean-app-arrow-debreu} is from the Arrow-Debreu price representation \eqref{E:lattice-calib-arrow-debreu}.
+    \item To calculate the standard deviation, consider another special payoff function:
+    \begin{equation}
+        h_{i,n}(\bm{y}) := \mathbb{E}[y_i(t_{n+1})^2|\bm{y}(t_n)= \bm{y}] 
+    \end{equation}
+    which can be calculated from \eqref{E:conditional-distribution}. Then, we have
+    \begin{eqnarray}
+        \mathbb{E}[y_i(t_{n+1})^2] & = & \mathbb{E}_{\bm{y}\sim\bm{y}(t_n)}[h_{i,n}(\bm{y})] \label{E:variance-by-def}\\
+                  & \approx & \sum_{\bm{m} \in \indexset_n} A_{k, \bm{m}} \times h_{i,n}(\bm{y}_{n}^{\bm{m}}) \label{E:variance-app-arrow-debreu}
+    \end{eqnarray} 
+    which follows the same reasoning as \eqref{E:mean-app-arrow-debreu}.
+
+    Then, the standard deviation of $y_i(t_{n+1})$ is given by the square root of the difference between the expectation of the square and the square of the expectation (a textbook formula). 
+\end{itemize}
+
+For how $\nu$ and $M_i$'s are set, see \S~\ref{S:node-grid}.
+
+\paragraph*{Transition probabilities:}
+
+The goal is to set the transition probability matrix $\bm{Q}_n$ such that \eqref{E:lattice-calib} holds for the next time step $t_{n+1}$. To this end, consider the delta payoff function $F_{n+1}^{\bm{e}}(\bm{y})$ at time $t_{n+1}$ as defined in \eqref{E:delta-payoff}. 
+
+In one hand,
+\begin{eqnarray}
+    \valuebackward'[F_{n+1}^{\bm{e}}, t_{n+1}] & = & \sum_{\bm{s} \in \indexset_{n}} q_{n}^{\bm{s},\bm{e}} \times \valuebackward'[F_{n}^{\bm{s}}, t_{n}] \label{E:transition-prob-calib} 
+\end{eqnarray}
+which can be computed numerically as shown later in this section.
+
+On the other hand, let's define 
+\begin{equation}
+    f_{n}^{\bm{m}}(\bm{y}) := \mathbb{E}[F_{n+1}^{\bm{m}}(\bm{y}_{n+1})|\bm{y}(t_n)=\bm{y}]
+    \quad \text{for}\quad \bm{m} \in \indexset_{n+1}.
+\end{equation}
+Then, we have
+\begin{eqnarray}
+    \mathbb{E}_{\bm{y}\sim\bm{y}(t_{n+1})}\left[ F_{n+1}^{\bm{e}}(\bm{y}) \right] & = & 
+    \mathbb{E}_{\bm{y}\sim\bm{y}(t_{n})}\left[ f_{n}^{\bm{e}}(\bm{y}) \right] \\
+    & \approx & \sum_{\bm{s} \in \indexset_{n}} A_{n}^{\bm{s}} \times f_{n+1}^{\bm{e}}(\bm{s}).
+    \label{E:transition-prob-calib-2}
+\end{eqnarray}
+Comparing \eqref{E:transition-prob-calib} to \eqref{E:transition-prob-calib-2} alongside the Arrow-Debreu definition \eqref{E:arrow-debreu-def}, we deduce that
+\begin{equation}
+    q_{n}^{\bm{s},\bm{e}} = f_{n+1}^{\bm{e}}(\bm{s}).
+\end{equation}
+
+It remains to describe how $f_{n+1}^{\bm{m}}(\bm{y})$ is computed: 
+\begin{eqnarray}
+f_{n+1}^{\bm{m}}(\bm{y}) & = & \mathbb{E} [F_{1,n+1}^{m_1}(y_1(t_{n+1})) \times F_{2,n+1}^{m_2}(y_2(t_{n+1}))| y_1(t_n) = y_1, y_2(t_n) = y_2] \label{E:green-1}\\
+    & = & \prod_{i=1,2} \mathbb{E} [F_{i,n+1}^{m_i}(y_i(t_{n+1})) | y_i(t_n) = y_1] \label{E:green-2}
+\end{eqnarray}
+where the last step is from the independence of the state variables $y_1$ and $y_2$, and each term in the product is computed numerically using the standard Gaussian quadratures. 
+
+\section{Calibration parameters}
+
+\subsection{Time Grid}
+\label{S:time-grid}
+
+\subsection{Node Grid}
+\label{S:node-grid}
+
+\appendix
+
+\section{Arrow-Debreu Price Derivation}
+\label{S:arrow-debreu}
+
+\begin{thebibliography}{}
+    
+    \bibitem{2fs-citi-mv} 2F-skew model for agency bonds in MRMS and the Yield Book, Level 2 Valuation, Xiaobo Liu, 2005, Citigroup.
+
+\end{thebibliography}
+
+
+\end{document}
