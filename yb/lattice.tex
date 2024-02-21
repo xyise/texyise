@@ -38,9 +38,9 @@ Denoting the valuation time by $t_0$, the initial values of the state variables 
 
 \subsection{Purpose of This Document}
 
-Although often termed as a `tree' method, the Yield Book utilises a lattice-based pricing approach to implement the 2-factor skew model for pricing interest rate derivatives. While it shares a lot of similarities with the tree method, the lattice-based pricing approach has distinct features. The purpose of this note is to provide a more detailed documentation of the lattice-based pricing approach, supplementing the existing documentation in \cite{2fs-citi-mv}.
+Often termed as a `tree' method, the Yield Book utilises a lattice-based pricing approach to implement the 2-factor skew model for pricing interest rate derivatives. While it shares a lot of similarities with the tree method, the lattice-based pricing approach has distinct features. The purpose of this note is to provide a more detailed documentation of the lattice-based pricing approach, supplementing the existing documentation in \cite{2fs-citi-mv}.
 
-Since the lattice-based pricing approach is a general framework not limited to the 2-factor skew model, we consider the following more general form of a term-structure model: The short rate $r(t)$ is given as
+Since the lattice-based pricing approach is a general framework not limited to the 2-factor skew model, we consider the following general form of a term-structure model: The short rate $r(t)$ is given as
 \begin{equation}
     r(t) = R(\bm{y}(t), t) \label{E:short-rate-generic}
 \end{equation}
@@ -52,7 +52,7 @@ where the 2-dimentional state vector $\bm{y} = (y_1, y_2)$ is driven by the foll
 \end{equation}
 Here, $R$ is a deterministic scalar function, $\bm{\mu}$ is a vector function, $\bm{\sigma}$ is a diagonal matrix function, and $\bm{W}(t)$ is a vector of independent Brownian motions.
 
-\textbf{Note}: While it is straightforward to extend the model with more than two factors, the computational complexity of applying the lattice-based approach increases significantly with the number of factors. In practice, the approach is typically limited to models with at most two factors.
+\textbf{Note}: Whilst it is straightforward to extend the model with more than two factors, the computational complexity of applying the lattice-based approach increases significantly with the number of factors. In practice, the approach is typically limited to models with at most two factors.
 
 \section{Lattice-Based Pricing Approach}
 \label{S:lattice-based-pricing}
@@ -103,7 +103,7 @@ Applying the backward induction \eqref{E:backward-induction} to a given payoff f
 \begin{equation}
     \mathbb{E}_{\bm{y} \sim \bm{y}(t_n)}\left[ e^{-\int_{t_0}^{t_n} r(s)ds} g(\bm{y}) \right] \approx \valuebackward[g,t_n] \label{E:ideal-lattice}
 \end{equation}
-But, as we will see in the next section, the lattice structure is constructed such that \eqref{E:ideal-lattice} holds under the assumption of zero rate ($r(t) = 0$). This approach makes the model calibration process more modular, allowing it to be executed in two stages:
+As we will see in the next section, however, the lattice structure is constructed such that \eqref{E:ideal-lattice} holds under the assumption of zero rate ($r(t) = 0$). This approach makes the model calibration process more modular, allowing it to be executed in two stages:
 \begin{itemize}
     \item constructing the lattice structure based on the dynamic model \eqref{E:state-variable-generic}
     \item fitting the short rate model \eqref{E:short-rate-generic} to the given term-structure
@@ -116,8 +116,9 @@ In this section, we describe the procedure of constructing the lattice structure
 
 \paragraph*{time grid:}
 
-First, divide the time horizon into small time steps to set up the time grid \eqref{E:time-grid} as described in \S~\ref{S:time-grid}. Then, all model variables are assumed to be piecewise constant over each time intervals $[t_n, t_{n+1})$.
-In particular, the state vector $\bm{y}(t_{n+1})$ conditional on $\bm{y}(t_n) = \bm{y}$ follows a multivariate normal distribution of independent variables and satisfies
+First, divide the time horizon into small time steps to set up the time grid \eqref{E:time-grid} as described in \S~\ref{S:time-grid}. 
+
+All model variables are assumed to be piecewise constant over each time intervals $[t_n, t_{n+1})$. Then, the state vector $\bm{y}(t_{n+1})$ conditional on $\bm{y}(t_n) = \bm{y}$ follows a multivariate normal distribution of independent variables and satisfies\footnote{TODO: For 2-factor skew model, one may integrate analytically.}
 \begin{equation}
     y_i(t_{n+1}) | \bm{y}(t_n) = \bm{y}  \sim \mathcal{N}(\mu_{i,n}(\bm{y},t_n), \sigma_{i,n}(\bm{y},t_n)^2)
     \label{E:conditional-distribution}
@@ -233,7 +234,7 @@ f_{n+1}^{\bm{e}}(\bm{s}) & := & \mathbb{E} [F_{1,n+1}^{e_1}(y_1(t_{n+1})) \times
 because the state variables $y_1(t_{n+1})$ and $y_2(t_{n+1})$ are independent conditional on the previous time step as the Brownian motions in \eqref{E:state-variable-generic} are assumed independent.
 The $i$-th term in \eqref{E:green-2}, denoted by $f_{i,n+1}^{e_i}(\bm{s})$, is computed numerically using the standard Gaussian quadratures.
 
-The independence assummption significantly reduces the computational complexity and memory requirement for the transition probability matrix. Specifically, we only need to compute and store the following number of expected values
+The independence assummption significantly reduces the computational complexity and memory requirement for the transition probability matrix: We only need to compute and store the following number of expected values
 \begin{eqnarray}
     (M_{n,1} \times M_{n,2}) \times (M_{n+1,1} + M_{n+1,2}),
 \end{eqnarray}
@@ -250,15 +251,15 @@ The construction outputs are the nodes and transition probabilities for each tim
 \label{S:fitting-term-structure}
 
 The short rate model \eqref{E:short-rate-generic} is fitted to match the given term-structure, by assuming $R(\bm{y}, t)$ is represented by a piecewise-constant function $R_{n+1}(\bm{y})$ over each 
-time interval $[t_n, t_{n+1})$. Recall from \eqref{E:discount-factor-node}, this implies that the discount factor $D_n^{\bm{s}}$ can be denoted with explicit dependence on $R_{n+1}$: 
+time interval $[t_n, t_{n+1})$. From \eqref{E:discount-factor-node}, the discount factor $D_n^{\bm{s}}$ can be denoted with explicit dependence on $R_{n+1}$: 
 \begin{eqnarray}
     D_n^{\bm{s}}(R_{n+1})
 \end{eqnarray}
 
-Before proceeding to the fitting process, let's first introduce the following variables:
+Let's first introduce the following variables:
 \begin{itemize}
     \item $\mathcal{P}_n$: the discount factor, or the price of a zero-coupon bond maturing at time $t_n$ seen at time $t_0$. This is derived from the term-structure.
-    \item $P_n^{\bm{m}}$: the Arrow-Debreu price of the payoff function $F_n^{\bm{m}}$ This is obtained by the backward induction \eqref{E:backward-induction} with the discount factor {\em included}:
+    \item $P_n^{\bm{m}}$: the Arrow-Debreu price of the payoff function $F_n^{\bm{m}}$. This is obtained by the backward induction \eqref{E:backward-induction} with the discount factor {\em included}:
     \begin{equation}
         P_n^{\bm{m}} = \valuebackward[F_n^{\bm{m}}, t_n].
     \end{equation}
@@ -269,7 +270,7 @@ The fitting process is a forward stepping process through the following recursiv
     \mathcal{P}_{n+1} =  \sum_{\bm{s} \in \indexset_n}\sum_{\bm{e} \in \indexset_{n+1}} D_n^{\bm{s}}(R_{n+1}) \times q_{n}^{\bm{s},\bm{e}} \times P_n^{\bm{s}} \label{E:term-structure-forward-calib}
 \end{equation}
 
-For $n=0$, we trivially set $P_0^{\bm{s}} = 1$ for all $\bm{s} \in \indexset_0$,\footnote{It consists of a single node} and match $\mathcal{P}_0 = 0$. In this step, $R_0$ is not applicable.
+Trivially for $n=0$, we set $P_0^{\bm{s}} = 1$ for all $\bm{s} \in \indexset_0$,\footnote{It consists of a single node} and match $\mathcal{P}_0 = 1$. In this step, $R_0$ is not applicable.
 
 Suppose that we have fitted up to time $t_n$, keeping the Arrow-Debreu prices $P_n^{\bm{s}}$ for all $\bm{s} \in \indexset_n$. Then,
 \begin{enumerate}
@@ -299,22 +300,13 @@ Specifically, the calibration process is carried out in the following steps:
 \label{S:time-grid}
 
 The parameters required to construct the time grid \eqref{E:time-grid} include:
-\begin{itemize}
-    \item pairs of horizon and time grid frequency:
-    \begin{equation}
-        (h_1, f_1), \cdots, (h_K, f_K)
-    \end{equation}
-    where $h_k$ is the horizon and $f_k$ is the frequency of the time grid for the $k$-th time interval $[t_{k-1}, t_k)$.
+pairs of horizon and time grid frequency:
+\begin{equation}
+    (h_1, f_1), \cdots, (h_K, f_K)
+\end{equation}
+where $h_k$ is the horizon and $f_k$ is the frequency of the time grid for the $k$-th time interval $[t_{k-1}, t_k)$.
 
-    These parameters are pre-configured by instrument type and payment frequency of the underlying instrument. 
-
-
-
-\end{itemize}
-
-
-The time grid \eqref{E:time-grid} is constructed based on a pre-configured set of parameters
-
+These parameters are pre-configured by instrument type and payment frequency of the underlying instrument. 
 
 
 \subsection{Node Grid}
@@ -348,12 +340,9 @@ Once the second derivatives are obtained, the cubic function $S_i(x)$ over the i
     S_i(x) = a_i(x - x_i)^3 + b_i(x - x_i)^2 + c_i(x - x_i) + d_i
 \end{equation}
 where
-\begin{eqnarray}
-    a_i & = & \frac{S_{i+1} - S_i}{6h_i} \\
-    b_i & = & \frac{S_i}{2} \\
-    c_i & = & \frac{y_{i+1} - y_i}{h_i} - \frac{h_i}{6}(S_{i+1} + 2S_i) \\
-    d_i & = & y_i
-\end{eqnarray}
+\begin{equation}
+    a_i = \frac{S_{i+1} - S_i}{6h_i}, \quad b_i = \frac{S_i}{2}, \quad c_i = \frac{y_{i+1} - y_i}{h_i} - \frac{h_i}{6}(S_{i+1} + 2S_i), \quad d_i = y_i
+\end{equation}
 
 \section{Gauss-Hermite quadrature}
 
