@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX := g++
-CXXFLAGS := -std=c++17 -g
+CXXFLAGS := -std=c++17 -g -Wall -Wextra
 
 # Directories
 SRC_DIR := .

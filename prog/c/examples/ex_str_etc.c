@@ -334,7 +334,48 @@ void sprintf_ex1(){
     }
 }
 
+void printPointer(void* ptr) {
+    printf("Pointer address: %p\n", ptr);
+}
 
+void void_pointer_ex() {
+    int x = 10;
+    double y = 20.0;
+
+    printPointer(&x);
+    printPointer(&y);
+
+}
+
+void sscanf_ex(){
+    char s[] = "AB232C ss10:XYZ:20";
+    char name[10];
+    int res = sscanf(s, "%s", name);
+    printf("name: %s\n", name);
+    printf("s: %s\n", s);
+    printf("res: %d\n", res);
+
+    char s2[] = " A234BCD";
+    int res2 = sscanf(s2, "%s", name);
+    printf("name: %s\n", name);
+    printf("s2: %s\n", s2);
+    printf("res2: %d\n", res2);
+}
+
+void str_array_len_ex(){
+    char s[] = "Hello";
+    printf("size of \"Hello\": %d\n", (int)(sizeof(s)/sizeof(s[0])));
+}
+
+void strstr_ex()
+{
+    char s[] = "Hello";
+    char *s1 = strstr(s, "ll");
+    printf("s1: %s\n", s1);
+
+    char *s2 = strstr(s, "oo");
+    printf("s2: %s\n", s2);
+}
 
 int main()
 {
@@ -355,6 +396,10 @@ int main()
     // ptr_to_str_ex();
     // const_char_ex();
     // strdup_ex();
-    sprintf_ex1();
+    // sprintf_ex1();
+    // void_pointer_ex();
+    sscanf_ex();
+    // str_array_len_ex();
+    //strstr_ex();
     return 0;
 }

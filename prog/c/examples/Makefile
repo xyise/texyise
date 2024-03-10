@@ -16,7 +16,7 @@ OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 
 # Binary files
 BINS := $(patsubst $(SRC_DIR)/%.c,$(BIN_DIR)/%,$(SRCS))
-
+	
 # Compiler flags
 CFLAGS := -Wall -Wextra
 
